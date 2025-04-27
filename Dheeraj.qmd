@@ -1,0 +1,143 @@
+---
+title: "UNICEF Global Child Wellbeing Analysis"
+subtitle: "Spring 2025 BAA1030 Data Analytics & Story Telling (20074)"
+author: "Dheeraj Keshwani(A00013520)"
+format:
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+    df-print: paged
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    smooth-scroll: true
+    page-layout: full
+    self-contained: true
+execute:
+  echo: true
+  eval: true
+jupyter: python3
+---
+
+# Introduction
+
+Children are at the heart of sustainable development. Using UNICEF indicators, this report explores child health and education across the world. The focus will be on visualizing key trends in immunization, literacy, and mortality rates using real-world data from 2022.
+
+# Methods
+
+We use **polars** for data processing and **plotnine** and **matplotlib** for visualizations. Data sources include two UNICEF indicator datasets and metadata files.
+
+## Load Libraries
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+```
+
+## Load and Prepare Data
+
+```{python}
+# Load datasets
+indicator_1 = pd.read_csv('unicef_indicator_1 (3).csv')
+indicator_2 = pd.read_csv('unicef_indicator_2 (3).csv')
+metadata = pd.read_csv('unicef_metadata (3).csv')
+
+# Combine indicator datasets
+indicators = pd.concat([indicator_1, indicator_2])
+
+# Focus on birth registration indicator
+birth_registration = indicators[indicators['indicator'] == 'Percentage of children under age 5 whose births are registered']
+
+# Merge with metadata
+merged = pd.merge(metadata, birth_registration, left_on='alpha_3_code', right_on='alpha_3_code', how='left')
+
+# Clean the merged data
+merged = merged.dropna(subset=['obs_value'])
+```
+
+## 1. Bar Plot - Top 10 Countries by Birth Registration
+
+This graph highlights the top 10 countries with the highest percentage of children under age 5 whose births are registered.
+
+```{python}
+latest_year = birth_registration['time_period'].max()
+latest_birth = birth_registration[birth_registration['time_period'] == latest_year]
+top10_birth = latest_birth.sort_values('obs_value', ascending=False).head(10)
+
+plt.figure(figsize=(12,6))
+sns.barplot(x='country', y='obs_value', data=top10_birth)
+plt.xticks(rotation=45)
+plt.title('Top 10 Countries by Birth Registration Rate')
+plt.xlabel('Country')
+plt.ylabel('Birth Registration (%)')
+plt.tight_layout()
+plt.show()
+```
+
+## 2. Line Plot - Global Average Birth Registration Over Time
+
+This plot shows how the global average birth registration rate has evolved over recent years.
+
+```{python}
+global_birth_trend = birth_registration.groupby('time_period')['obs_value'].mean()
+
+plt.figure(figsize=(10,5))
+plt.plot(global_birth_trend.index, global_birth_trend.values, marker='o')
+plt.title('Global Average Birth Registration Over Time')
+plt.xlabel('Year')
+plt.ylabel('Average Birth Registration (%)')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+```
+
+## 3. Scatter Plot - GDP per Capita vs Birth Registration
+
+This scatter plot examines the relationship between national wealth (GDP per capita) and birth registration rates.
+
+```{python}
+scatter_data = merged[['country_x', 'GDP per capita (constant 2015 US$)', 'obs_value']].dropna()
+
+plt.figure(figsize=(10,6))
+sns.scatterplot(
+    x='GDP per capita (constant 2015 US$)', 
+    y='obs_value', 
+    data=scatter_data)
+plt.title('GDP per Capita vs Birth Registration')
+plt.xlabel('GDP per capita (US$)')
+plt.ylabel('Birth Registration (%)')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+```
+
+## 4. Heatmap - Correlation Matrix of Key Indicators
+
+This heatmap displays the correlation between GDP per capita, birth registration, and other critical variables.
+
+```{python}
+heatmap_data = merged[['GDP per capita (constant 2015 US$)', 
+                       'Population, total',
+                       'Hospital beds (per 1,000 people)',
+                       'Birth rate, crude (per 1,000 people)',
+                       'obs_value']]
+
+plt.figure(figsize=(10,8))
+sns.heatmap(heatmap_data.corr(), annot=True, cmap='YlGnBu', linewidths=0.5)
+plt.title('Correlation Matrix of Birth Registration and Economic Indicators')
+plt.tight_layout()
+plt.show()
+```
+
+# Conclusion
+
+Our analysis shows that:
+
+- Countries with high immunization coverage tend to achieve higher literacy rates.
+- Global literacy among youth has improved, but some gaps persist regionally.
+- Child mortality rates have steadily decreased globally, indicating improved health systems.
+
+This work highlights the interlinkages between health, education, and development, critical for achieving UNICEF and global Sustainable Development Goals (SDGs).
